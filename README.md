@@ -28,7 +28,8 @@ A sophisticated AI orchestration system that acts as a single unified endpoint w
 
 ## 🏗️ Architecture
 
-<img width="3600" height="690" alt="image" src="https://github.com/user-attachments/assets/d53be467-3cf3-441a-9ef5-365bbc4fb87c" />
+<img width="3600" height="1000" alt="image" src="https://github.com/user-attachments/assets/bd1c8b97-58a2-404f-b723-3ce651840b64" />
+
 
 
 ## 🛠️ Installation & Setup
