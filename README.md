@@ -28,21 +28,7 @@ A sophisticated AI orchestration system that acts as a single unified endpoint w
 
 ## 🏗️ Architecture
 
-flowchart LR
-    UserRequest["User Request"]
-    MoERouter["MoE Router\n(AI Classification)"]
-    MoEOrchestrator["MoE Orchestrator\n(Model Coordination)"]
-    ModelsRegistry["Models Registry\n- 26 Text Models\n- 4 Image Models\n- Capabilities"]
-    PollinationsClient["Pollinations Client\n- POST for text/audio\n- GET for images\n- Authentication"]
-    PerformanceTracker["Performance Tracker\n- 10 Log Limit\n- Speed Optimization"]
-    UnifiedResponse["Unified Response\n- Text + Images\n- Audio + Metadata"]
-
-    UserRequest --> MoERouter
-    MoERouter --> MoEOrchestrator
-    MoEOrchestrator --> ModelsRegistry
-    MoEOrchestrator --> PollinationsClient
-    ModelsRegistry --> PerformanceTracker
-    PollinationsClient --> UnifiedResponse
+<img width="3600" height="690" alt="image" src="https://github.com/user-attachments/assets/d53be467-3cf3-441a-9ef5-365bbc4fb87c" />
 
 
 ## 🛠️ Installation & Setup
