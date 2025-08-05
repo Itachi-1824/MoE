@@ -28,27 +28,22 @@ A sophisticated AI orchestration system that acts as a single unified endpoint w
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│   User Request  │───▶│   MoE Router     │───▶│   MoE Orchestrator  │
-│                 │    │ (AI Classification)│    │  (Model Coordination)│
-└─────────────────┘    └──────────────────┘    └─────────────────────┘
-                                │                          │
-                                ▼                          ▼
-                    ┌─────────────────────┐    ┌─────────────────────┐
-                    │  Models Registry    │    │ Pollinations Client │
-                    │ - 26 Text Models    │    │ - POST for text/audio│
-                    │ - 4 Image Models    │    │ - GET for images     │
-                    │ - Capabilities      │    │ - Authentication     │
-                    └─────────────────────┘    └─────────────────────┘
-                                │                          │
-                                ▼                          ▼
-                    ┌─────────────────────┐    ┌─────────────────────┐
-                    │ Performance Tracker │    │  Unified Response   │
-                    │ - 10 Log Limit      │    │ - Text + Images     │
-                    │ - Speed Optimization│    │ - Audio + Metadata  │
-                    └─────────────────────┘    └─────────────────────┘
-```
+flowchart LR
+    UserRequest["User Request"]
+    MoERouter["MoE Router\n(AI Classification)"]
+    MoEOrchestrator["MoE Orchestrator\n(Model Coordination)"]
+    ModelsRegistry["Models Registry\n- 26 Text Models\n- 4 Image Models\n- Capabilities"]
+    PollinationsClient["Pollinations Client\n- POST for text/audio\n- GET for images\n- Authentication"]
+    PerformanceTracker["Performance Tracker\n- 10 Log Limit\n- Speed Optimization"]
+    UnifiedResponse["Unified Response\n- Text + Images\n- Audio + Metadata"]
+
+    UserRequest --> MoERouter
+    MoERouter --> MoEOrchestrator
+    MoEOrchestrator --> ModelsRegistry
+    MoEOrchestrator --> PollinationsClient
+    ModelsRegistry --> PerformanceTracker
+    PollinationsClient --> UnifiedResponse
+
 
 ## 🛠️ Installation & Setup
 
