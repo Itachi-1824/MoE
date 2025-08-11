@@ -253,7 +253,10 @@ class MoERouter:
         reasoning_keywords = ['solve', 'calculate', 'analyze', 'reasoning', 'logic', 'math', 'problem', 'explain step by step']
         code_keywords = ['code', 'program', 'function', 'debug', 'python', 'javascript', 'algorithm', 'implement', 'development']
         creative_keywords = ['story', 'poem', 'creative', 'write', 'fiction', 'novel', 'narrative', 'character']
-        tool_keywords = ['search', 'lookup', 'find', 'get data', 'api', 'function']
+        tool_keywords = [
+            'search', 'lookup', 'find', 'get data', 'api', 'function', 'current',
+            'latest', 'price of', 'weather', 'stock price', 'news', 'sports scores'
+        ]
         
         # Multimodal keywords - requests that benefit from both text AND images
         multimodal_keywords = ['explain with', 'show me', 'demonstrate', 'tutorial', 'guide', 'how to', 'example', 'comparison']
@@ -489,85 +492,29 @@ class MoERouter:
         # Lower threshold for using multiple models (was 2, now 1)
         return factors >= 1
     
-    def _select_optimal_image_model(self, classification: Dict[str, Any]) -> List[ModelInfo]:
+    def _select_optimal_image_model(self, classification: Dict[str, Any], prompt: str) -> List[ModelInfo]:
         """Intelligently select image model based on complexity and requirements"""
         
-        # Extract task characteristics
-        enhanced_params = classification.get("enhanced_params", {})
-        complexity = enhanced_params.get("complexity_level", "moderate")
-        creativity = enhanced_params.get("creativity_level", "medium")
+        task_type = classification.get("task_type")
+
+        if task_type == "img2img":
+            kontext = self.registry.get_model_by_name("kontext")
+            self.logger.info("🎨 Selected Kontext for img2img task")
+            return [kontext] if kontext else []
+
+        complexity = self._assess_complexity(prompt)
+        creativity = self._assess_creativity_need(prompt)
+
+        # Use turbo for more complex or creative tasks
+        if complexity == "complex" or creativity > 0.5 or "turbo" in prompt.lower():
+            turbo = self.registry.get_model_by_name("turbo")
+            self.logger.info("🚀 Selected Turbo for complexity/creativity")
+            return [turbo] if turbo else []
         
-        # Get original prompt for analysis
-        prompt = classification.get("reasoning", "")  # Use reasoning field as fallback
-        
-        # Complex image indicators
-        complex_indicators = [
-            "detailed", "complex", "intricate", "realistic", "photorealistic",
-            "high quality", "professional", "artistic", "fine art", "masterpiece",
-            "text in image", "multiple objects", "scene with", "composition",
-            "lighting", "shadows", "perspective", "3d render", "detailed background",
-            "highly detailed", "cyberpunk", "futuristic", "multiple characters",
-            "text signs", "architecture", "cityscape", "landscape", "portrait"
-        ]
-        
-        # Simple/fast image indicators  
-        simple_indicators = [
-            "simple", "quick", "basic", "sketch", "outline", "logo",
-            "icon", "minimal", "clean", "abstract", "geometric", "cartoon"
-        ]
-        
-        prompt_lower = prompt.lower()
-        complex_score = sum(1 for indicator in complex_indicators if indicator in prompt_lower)
-        simple_score = sum(1 for indicator in simple_indicators if indicator in prompt_lower)
-        
-        # Decision logic (more aggressive for complex tasks)
-        use_gptimage = False
-        
-        # Factors that favor gptimage (3-5 min, handles complex images expertly)
-        if complex_score >= 1:  # Even one complexity indicator should trigger GPTImage
-            use_gptimage = True
-            reason = f"Complex image indicators detected ({complex_score})"
-        elif complexity == "complex":  # High-level complexity assessment
-            use_gptimage = True
-            reason = "Complex task classification"
-        elif creativity == "high":  # High creativity often needs quality
-            use_gptimage = True
-            reason = "High creativity requirement"
-        elif "text" in prompt_lower and ("in" in prompt_lower or "on" in prompt_lower):  # Text in images
-            use_gptimage = True
-            reason = "Text-in-image requirement"
-        elif len(prompt.split()) > 15:  # Long, detailed prompts (lowered threshold)
-            use_gptimage = True
-            reason = "Detailed prompt requires GPTImage intelligence"
-        
-        # Factors that favor flux (seconds, fast but limited complexity)
-        elif simple_score >= 1:  # Simple image requests
-            use_gptimage = False
-            reason = "Simple image request - Flux speed advantage"
-        elif complexity == "simple":
-            use_gptimage = False
-            reason = "Simple complexity level"
-        elif "quick" in prompt_lower or "fast" in prompt_lower:
-            use_gptimage = False
-            reason = "Speed priority requested"
-        
-        # Default decision based on complexity
-        elif complexity == "complex":
-            use_gptimage = True
-            reason = "Complex task - GPTImage preferred"
-        else:
-            use_gptimage = False  # Default to flux for speed
-            reason = "Default to Flux for speed"
-        
-        # Get the selected model
-        if use_gptimage:
-            gptimage = self.registry.get_model_by_name("gptimage")
-            self.logger.info(f"🎨 Selected GPTImage (3-5min): {reason}")
-            return [gptimage] if gptimage else []
-        else:
-            flux = self.registry.get_model_by_name("flux")  
-            self.logger.info(f"🚀 Selected Flux (seconds): {reason}")
-            return [flux] if flux else []
+        # Default to flux
+        flux = self.registry.get_model_by_name("flux")
+        self.logger.info("🎨 Selected Flux as default image model")
+        return [flux] if flux else []
     
     def _emergency_fallback(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Emergency fallback classification"""
@@ -600,7 +547,8 @@ class MoERouter:
         strategy = self._determine_strategy(classification)
         
         # Step 3: Select models based on task type and strategy
-        primary_models = self._select_primary_models(task_type, classification)
+        prompt = request.get('prompt', '') or request.get('messages', [{}])[-1].get('content', '')
+        primary_models = self._select_primary_models(task_type, classification, prompt)
         secondary_models = self._select_secondary_models(task_type, classification, strategy)
         
         return RoutingDecision(
@@ -632,14 +580,14 @@ class MoERouter:
         else:
             return RoutingStrategy.SINGLE_BEST
     
-    def _select_primary_models(self, task_type: TaskType, classification: Dict[str, Any]) -> List[ModelInfo]:
+    def _select_primary_models(self, task_type: TaskType, classification: Dict[str, Any], prompt: str) -> List[ModelInfo]:
         """Select primary models for the task"""
         
         input_mod = Modality(classification["input_modalities"][0])
         output_mod = Modality(classification["output_modalities"][0])
         
         if task_type == TaskType.IMAGE_GENERATION:
-            return self._select_optimal_image_model(classification)
+            return self._select_optimal_image_model(classification, prompt)
         
         elif task_type == TaskType.IMAGE_TO_IMAGE:
             return self.registry.get_models_by_capability("img2img")
@@ -669,35 +617,19 @@ class MoERouter:
             return self.registry.get_models_by_capability("tools")[:3]
         
         else:  # TEXT_GENERATION and others
-            # Get enhanced parameters to guide model selection
-            enhanced_params = classification.get("enhanced_params", {})
-            complexity = enhanced_params.get("complexity_level", "moderate")
+            prompt_length = len(classification.get("reasoning", ""))
+            candidates = self.registry.get_best_models_for_task(
+                "text_generation",
+                {"input": "text", "output": "text"}
+            )
             
-            # Select models based on complexity and quality
-            if complexity == "complex" or classification.get("use_multiple_models", False):
-                # Use top-tier models for complex tasks
-                preferred_models = ["openai-fast", "openai", "deepseek-reasoning", "qwen-coder", "mistral"]
-                selected_models = []
-                
-                for model_name in preferred_models:
-                    model = self.registry.get_model_by_name(model_name)
-                    if model:
-                        selected_models.append(model)
-                        if len(selected_models) >= 2:
-                            break
-                
-                if selected_models:
-                    return selected_models
-            else:
-                # Single model for simple tasks - but use quality models
-                preferred_single = ["openai-fast", "openai", "deepseek", "mistral", "qwen-coder"]
-                for model_name in preferred_single:
-                    model = self.registry.get_model_by_name(model_name)
-                    if model:
-                        return [model]
+            # Filter by maxInputChars
+            valid_models = [
+                m for m in candidates
+                if m.max_input_chars is None or m.max_input_chars >= prompt_length
+            ]
             
-            # Final fallback to any available models
-            return list(self.registry.text_models.values())[:1]
+            return valid_models[:2] if classification.get("use_multiple_models") else valid_models[:1]
     
     def _select_secondary_models(self, task_type: TaskType, classification: Dict[str, Any], 
                                strategy: RoutingStrategy) -> Optional[List[ModelInfo]]:
