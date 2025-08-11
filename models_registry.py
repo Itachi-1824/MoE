@@ -70,61 +70,22 @@ class ModelsRegistry:
             )
             self.text_models[model['name']] = model_info
             
-        # Load image models with detailed capabilities and preferences
-        image_models_data = {
-            "flux": {
-                "description": "Flux 1 Schnell - Fast image generation model (seconds)",
-                "input_modalities": [Modality.TEXT],
-                "img2img": False,
-                "capabilities": ["fast", "general", "text2img", "quick_generation"],
-                "preferred_for": ["quick_generation", "simple_images", "speed_priority"],
-                "generation_time": "seconds",
-                "complexity_level": "standard",
-                "best_for": "Fast, simple to moderate complexity images"
-            },
-            "gptimage": {
-                "description": "GPTImage Model 1 - Handles complex images expertly (3-5 minutes)",
-                "input_modalities": [Modality.TEXT, Modality.IMAGE],
-                "img2img": True,
-                "aliases": "gptimage-model-1",
-                "capabilities": ["complex_tasks", "text_understanding", "multi_image", "intelligent_prompts", "complex_images"],
-                "preferred_for": ["complex_images", "detailed_work", "text_in_images", "multi_image_editing", "high_quality"],
-                "multi_image_support": True,
-                "generation_time": "3-5 minutes",
-                "complexity_level": "high",
-                "best_for": "Complex, detailed images with high quality requirements"
-            },
-            "turbo": {
-                "description": "Turbo Model (likely SDXL Turbo) - Fast generation", 
-                "input_modalities": [Modality.TEXT],
-                "img2img": False,
-                "capabilities": ["fast", "sdxl", "general"],
-                "preferred_for": ["speed", "general_images"]
-            },
-            "kontext": {
-                "description": "Flux 1 Kontext Dev - Preferred for image inpainting and editing (1 image at a time)",
-                "input_modalities": [Modality.TEXT, Modality.IMAGE],
-                "img2img": True,
-                "aliases": "flux-kontext-dev",
-                "capabilities": ["inpainting", "editing", "img2img", "single_image_only"],
-                "preferred_for": ["inpainting", "image_editing", "single_image_modifications"],
-                "multi_image_support": False,
-                "constraint": "Only accepts 1 image at a time"
-            }
-        }
-            
-        for model_name, model_data in image_models_data.items():
+        # Load image models
+        with open('image_models.json', 'r') as f:
+            image_data = json.load(f)
+
+        for model in image_data:
             model_info = ModelInfo(
-                name=model_name,
-                description=model_data["description"],
-                provider="pollinations",
-                tier=ModelTier.ANONYMOUS,
-                input_modalities=set(model_data["input_modalities"]),
-                output_modalities={Modality.IMAGE},
-                vision=model_data.get("img2img", False),
-                aliases=model_data.get("aliases")
+                name=model['name'],
+                description=model['description'],
+                provider=model['provider'],
+                tier=ModelTier(model['tier']),
+                input_modalities=set(Modality(m) for m in model['input_modalities']),
+                output_modalities=set(Modality(m) for m in model['output_modalities']),
+                vision=model.get('img2img', False),
+                aliases=model.get('aliases')
             )
-            self.image_models[model_name] = model_info
+            self.image_models[model['name']] = model_info
     
     def get_models_by_capability(self, capability: str) -> List[ModelInfo]:
         """Get models that support a specific capability"""

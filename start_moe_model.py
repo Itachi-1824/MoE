@@ -52,7 +52,7 @@ def main():
         "workers": 1,
         "loop": "asyncio",
         "http": "httptools", 
-        "log_level": "info",
+        "log_level": "debug",
         "access_log": True,
         "use_colors": True,
         # Performance optimizations
