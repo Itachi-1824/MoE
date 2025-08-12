@@ -6,6 +6,7 @@ import os
 import sys
 import uvicorn
 from dotenv import load_dotenv
+from update_models import update_model
 
 # Load environment variables
 load_dotenv()
@@ -14,7 +15,10 @@ def main():
     """Start the MoE unified model server"""
     print("🤖 Starting MoE Unified Model...")
     print("=" * 40)
-    
+    print("Updating the models list")
+    update_model()
+    print("="*40)
+
     # Check environment
     token = os.getenv("TOKEN")
     if not token:

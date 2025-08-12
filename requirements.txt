@@ -4,7 +4,7 @@ uvicorn[standard]>=0.24.0
 pydantic>=2.4.0
 aiohttp>=3.9.0
 python-dotenv>=1.0.0
-
+requests
 # Async support
 asyncio-throttle>=1.0.2
 
